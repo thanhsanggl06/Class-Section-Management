@@ -1,11 +1,18 @@
 package iuh.fit.se.entity;
 
 import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.util.Set;
 
 @Entity
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
+@ToString
+@Builder
 public class Unit {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
