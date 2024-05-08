@@ -10,4 +10,5 @@ import java.util.List;
 @Repository
 public interface MajorRepository extends JpaRepository<Major, Long> {
     List<Major> findAllByFaculty(Faculty faculty);
+
 }

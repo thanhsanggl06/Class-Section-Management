@@ -16,9 +16,7 @@ public class Subject{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
-    @Column(unique = true)
-    private String subjectCode;
-    @Column(columnDefinition = "TEXT CHARACTER SET utf8")
+    @Column(columnDefinition = "TEXT CHARACTER SET utf8", unique = true)
     private String subjectName;
     private int credit;
     private int theoryCredit;

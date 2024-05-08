@@ -23,7 +23,9 @@ public class Student {
     private String fullName;
     @Enumerated(EnumType.STRING)
     private Gender gender;
+    @Column(unique = true)
     private String phone;
+    @Column(unique = true)
     private String email;
     @ManyToOne
     @JoinColumn(name = "faculty_id")

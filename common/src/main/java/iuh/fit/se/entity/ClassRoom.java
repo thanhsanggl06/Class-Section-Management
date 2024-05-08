@@ -1,8 +1,6 @@
 package iuh.fit.se.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
@@ -14,6 +12,7 @@ import lombok.*;
 @Builder
 public class ClassRoom {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
     @Column(unique = true)
     private String roomName;
