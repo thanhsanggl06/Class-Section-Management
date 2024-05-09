@@ -30,12 +30,15 @@ public class Unit {
     @ManyToOne
     @JoinColumn(name = "schedule_id")
     private Schedule schedule;
+    @ManyToOne
+    @JoinColumn(name = "practice_schedule_id")
+    private Schedule practiceSchedule;
     @OneToMany(mappedBy = "unit")
     private Set<Enroll> registrations;
     @Enumerated(EnumType.STRING)
     private AcademicProgram academicProgram;
-    private LocalDate startDay;
-    private LocalDate endDay;
+    private LocalDate startDate;
+    private LocalDate endDate;
     private double tuitionPerCredit;
 
 }
