@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @AllArgsConstructor
@@ -47,7 +48,7 @@ public class UnitServiceImpl implements UnitService {
         int totalTheoryPeriod = Constant.PERIOD_PER_THEORY_CREDIT * subject.getTheoryCredit();
         int totalLesson = (int) Math.ceil(totalTheoryPeriod / periodPerLesson);
         LocalDate endTheory = unitRequest.getStartDate().plusWeeks(totalLesson);
-        LocalDate endDate = endTheory.plusWeeks(1);
+        LocalDate endDate = endTheory.plusWeeks(Constant.BUFFER_TIME);
 
         //Check valid classroom
         int checkSchedule1 = unitRepository.countUnitsForClassRoomInTimeRange(classRoom, theory.getDayOfWeek(), theory.getPeriodStart(), theory.getPeriodEnd(), unitRequest.getStartDate(), endDate);
@@ -84,17 +85,18 @@ public class UnitServiceImpl implements UnitService {
             int totalPracticePeriod = Constant.PERIOD_PER_PRACTICE_CREDIT * subject.getPracticeCredit();
             int totalPracticeLesson = (int) Math.ceil(totalPracticePeriod / periodPerPracticeLesson);
 
-            LocalDate endPractice = unitRequest.getStartDate().plusWeeks(3+totalPracticeLesson+1);
+            LocalDate startPractice = unitRequest.getStartDate().plusWeeks(Constant.THEORY_TO_PRACTICE_TIME);
+            LocalDate endPractice = startPractice.plusWeeks(totalPracticeLesson+Constant.BUFFER_TIME);
             //Check lecturer schedule
-            int checkTheoreticalSchedule2 = unitRepository.checkTheLecturerPracticalTeachingSchedule(lecturer, practice.getDayOfWeek(), practice.getDayOfWeek(), practice.getDayOfWeek(), unitRequest.getStartDate().plusWeeks(3), endPractice );
-            int checkPracticalSchedule2 = unitRepository.checkTheLecturerPracticalTeachingSchedule(lecturer, practice.getDayOfWeek(), practice.getDayOfWeek(), practice.getDayOfWeek(), unitRequest.getStartDate().plusWeeks(3), endPractice );
+            int checkTheoreticalSchedule2 = unitRepository.checkTheLecturerPracticalTeachingSchedule(lecturer, practice.getDayOfWeek(), practice.getDayOfWeek(), practice.getDayOfWeek(), startPractice, endPractice );
+            int checkPracticalSchedule2 = unitRepository.checkTheLecturerPracticalTeachingSchedule(lecturer, practice.getDayOfWeek(), practice.getDayOfWeek(), practice.getDayOfWeek(), startPractice, endPractice );
             if(checkPracticalSchedule2 > 0 || checkTheoreticalSchedule2 >0 ){
                 throw new BadRequest("Lecturer's schedule clashed");
             }
             if (endPractice.isAfter(endTheory))
                 endDate = endPractice;
-            int checkPracticeSchedule1 = unitRepository.countUnitsForClassRoomInTimeRange(classRoom, practice.getDayOfWeek(), practice.getPeriodStart(), practice.getPeriodEnd(), unitRequest.getStartDate().plusWeeks(3), endPractice);
-            int checkPracticeSchedule2 = unitRepository.countPracticeUnitsForClassRoomInTimeRange(classRoom, practice.getDayOfWeek(), practice.getPeriodStart(), practice.getPeriodEnd(), unitRequest.getStartDate().plusWeeks(3), endPractice);
+            int checkPracticeSchedule1 = unitRepository.countUnitsForClassRoomInTimeRange(classRoom, practice.getDayOfWeek(), practice.getPeriodStart(), practice.getPeriodEnd(), startPractice, endPractice);
+            int checkPracticeSchedule2 = unitRepository.countPracticeUnitsForClassRoomInTimeRange(classRoom, practice.getDayOfWeek(), practice.getPeriodStart(), practice.getPeriodEnd(), startPractice, endPractice);
             if(checkPracticeSchedule1 > 0 || checkPracticeSchedule2 > 0){
                 throw new BadRequest("The classroom was used by another unit class");
             }
@@ -118,5 +120,28 @@ public class UnitServiceImpl implements UnitService {
             unitResponse.setPracticeScheduleId(practice.getId());
 
         return unitResponse;
+    }
+
+    @Override
+    public Iterable<UnitResponse> findUnitsBySubjectId(long subjectId) {
+        Subject subject = subjectRepository.findById(subjectId).orElseThrow(() -> new ResourceNotFoundException("SUBJECT", "ID", subjectId));
+        List<UnitResponse> unitResponses = unitRepository.findAllBySubject(subject).stream().map(unit -> {
+            UnitResponse unitResponse = UnitAutoMapper.MAPPER.mapToUnitResponse(unit);
+            unitResponse.setLecturerId(unit.getLecturer().getId());
+            unitResponse.setRoomId(unit.getClassRoom().getId());
+            unitResponse.setScheduleId(unit.getSchedule().getId());
+            unitResponse.setSubjectId(subject.getId());
+            if(unit.getPracticeSchedule() != null){
+                unitResponse.setPracticeScheduleId(unit.getPracticeSchedule().getId());
+            }
+            return unitResponse;
+        }).toList();
+        return unitResponses;
+    }
+
+    @Override
+    public Unit findById(long id) {
+        Unit unit = unitRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("UNIT", "ID", id));
+        return unit;
     }
 }

@@ -33,7 +33,7 @@ public class Unit {
     @ManyToOne
     @JoinColumn(name = "practice_schedule_id")
     private Schedule practiceSchedule;
-    @OneToMany(mappedBy = "unit")
+    @OneToMany(mappedBy = "unit", fetch = FetchType.LAZY)
     private Set<Enroll> registrations;
     @Enumerated(EnumType.STRING)
     private AcademicProgram academicProgram;

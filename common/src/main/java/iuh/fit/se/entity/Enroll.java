@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
+@IdClass(EnrollId.class)
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
