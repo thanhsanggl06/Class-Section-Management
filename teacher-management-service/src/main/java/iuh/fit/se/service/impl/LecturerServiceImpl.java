@@ -86,7 +86,7 @@ public class LecturerServiceImpl implements LecturerService {
         }else{
             maxValue = 1;
         }
-        String lecturerCode = LocalDate.now().getYear()%100 + String.format("%06d", maxValue);
+        String lecturerCode = LocalDate.now().getYear()%100 + String.format("%05d", maxValue);
 
         lecturer.setLecturerCode(lecturerCode);
         lecturer.setFaculty(faculty);

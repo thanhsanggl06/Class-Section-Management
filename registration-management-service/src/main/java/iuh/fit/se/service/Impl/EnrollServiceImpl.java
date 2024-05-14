@@ -15,6 +15,8 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -29,12 +31,22 @@ public class EnrollServiceImpl implements EnrollService {
     private final WebClient.Builder webClientBuilder;
     private final KafkaTemplate<String, RegisterSuccessEvent> kafkaTemplate;
 
-    @Override
-    public Boolean register(EnrollRequest enrollRequest) {
-        Student student = webClientBuilder.build().get()
-                .uri("http://student-service/api/student/{code}", enrollRequest.getStudentCode())
+
+    public Student getStudent(String studentCode){
+
+        return webClientBuilder.build().get()
+                .uri("http://student-service/api/student/{code}",studentCode)
                 .retrieve()
                 .bodyToMono(Student.class).block();
+    }
+
+    public Mono<Student> fallbackForGetStudent(String studentCode, WebClientResponseException e) {
+        return Mono.empty();
+    }
+
+    @Override
+    public Boolean register(EnrollRequest enrollRequest) {
+        Student student = getStudent(enrollRequest.getStudentCode());
 
         if(student == null){
             throw new ResourceNotFoundException("STUDENT",  "CODE", enrollRequest.getStudentCode());
@@ -108,8 +120,8 @@ public class EnrollServiceImpl implements EnrollService {
             try{
                 Enroll enroll  = new Enroll(student, unit, null);
                 Enroll saved = enrollRepository.save(enroll);
-                kafkaTemplate.send("notificationTopic",
-                        new RegisterSuccessEvent(student.getEmail(), saved.getUnit().getSubject().getSubjectName(), unit.getTuitionPerCredit() * unit.getSubject().getCredit()));
+//                kafkaTemplate.send("notificationTopic",
+//                        new RegisterSuccessEvent(student.getEmail(), saved.getUnit().getSubject().getSubjectName(), unit.getTuitionPerCredit() * unit.getSubject().getCredit()));
                 return true;
             }catch (OptimisticLockingFailureException ex){
                 return false;

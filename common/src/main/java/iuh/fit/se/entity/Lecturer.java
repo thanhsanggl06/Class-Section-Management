@@ -21,4 +21,8 @@ public class Lecturer {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "faculty_id")
     private Faculty faculty;
+
+    public Lecturer(long id) {
+        this.id = id;
+    }
 }
