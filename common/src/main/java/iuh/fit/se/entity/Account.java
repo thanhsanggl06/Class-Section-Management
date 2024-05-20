@@ -23,11 +23,24 @@ public class Account {
     @Enumerated(EnumType.STRING)
     private Role role; // Assuming you have a Role enum defined somewhere, representing roles like STUDENT, LECTURER, etc.
 
-    @ManyToOne
+    @OneToOne
     @JoinColumn(name = "student_id")
     private Student student; // reference to the Student entitys
 
-    @ManyToOne
+    @OneToOne
     @JoinColumn(name = "lecturer_id")
     private Lecturer lecturer; // reference to the Lecturer entity
+
+    public void linkToStudent(Student student) {
+        this.student = student;
+        this.username = student.getStudentCode();
+        this.role = Role.STUDENT; // assuming you have a Role enum defined
+    }
+
+    public void linkToLecturer(Lecturer lecturer) {
+        this.lecturer = lecturer;
+        this.username = lecturer.getLecturerCode();
+        this.role = Role.LECTURER; // assuming you have a Role enum defined
+    }
+
 }

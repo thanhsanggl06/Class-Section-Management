@@ -1,17 +1,18 @@
 package iuh.fit.se.service.Impl;
 
+import iuh.fit.se.constant.Constant;
 import iuh.fit.se.dto.StudentRequest;
 import iuh.fit.se.dto.StudentResponse;
-import iuh.fit.se.entity.Cohorts;
-import iuh.fit.se.entity.Faculty;
-import iuh.fit.se.entity.Major;
-import iuh.fit.se.entity.Student;
+import iuh.fit.se.entity.*;
 import iuh.fit.se.exception.ResourceNotFoundException;
 import iuh.fit.se.mapper.StudentAutoMapper;
+import iuh.fit.se.repository.AccountRepository;
 import iuh.fit.se.repository.StudentRepository;
 import iuh.fit.se.service.StudentService;
 import lombok.AllArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDate;
@@ -21,6 +22,8 @@ import java.util.stream.Collectors;
 @Service
 @AllArgsConstructor
 public class StudentServiceImpl implements StudentService {
+    private final AccountRepository accountRepository;
+    private final PasswordEncoder passwordEncoder;
     private final StudentRepository studentRepository;
     private final WebClient.Builder webClientBuilder;
     @Override
@@ -55,6 +58,7 @@ public class StudentServiceImpl implements StudentService {
 
 
     @Override
+    @Transactional
     public StudentResponse create(StudentRequest request) {
         Student student = StudentAutoMapper.MAPPER.mapToStudent(request);
 
@@ -94,6 +98,11 @@ public class StudentServiceImpl implements StudentService {
         student.setCohorts(cohorts);
         student.setMajor(major);
         Student savedStudent = studentRepository.save(student);
+
+        Account account = new Account();
+        account.linkToStudent(savedStudent);
+        account.setPassword(passwordEncoder.encode(Constant.DEFAULT_PWD));
+        accountRepository.save(account);
 
         StudentResponse response = StudentAutoMapper.MAPPER.mapToStudentResponse(savedStudent);
         response.setFacultyId(faculty.getId());

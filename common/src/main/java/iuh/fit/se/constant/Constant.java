@@ -7,4 +7,6 @@ public class Constant {
     public static final int THEORY_TO_PRACTICE_TIME = 3;
 
     public static final String DEFAULT_PWD = "1111";
+
+    public static final String NOTIFICATION_TOPIC = "notificationTopic";
 }

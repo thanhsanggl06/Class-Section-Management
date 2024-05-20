@@ -1,15 +1,20 @@
 package iuh.fit.se.service.impl;
 
+import iuh.fit.se.constant.Constant;
 import iuh.fit.se.dto.LecturerRequest;
 import iuh.fit.se.dto.LecturerResponse;
+import iuh.fit.se.entity.Account;
 import iuh.fit.se.entity.Faculty;
 import iuh.fit.se.entity.Lecturer;
 import iuh.fit.se.exception.ResourceNotFoundException;
 import iuh.fit.se.mapper.LecturerAutoMapper;
+import iuh.fit.se.repository.AccountRepository;
 import iuh.fit.se.repository.LecturerRepository;
 import iuh.fit.se.service.LecturerService;
 import lombok.AllArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDate;
@@ -19,6 +24,8 @@ import java.util.stream.Collectors;
 @Service
 @AllArgsConstructor
 public class LecturerServiceImpl implements LecturerService {
+    private final AccountRepository accountRepository;
+    private final PasswordEncoder passwordEncoder;
     private final LecturerRepository lecturerRepository;
     private final WebClient.Builder webClientBuilder;
     @Override
@@ -66,6 +73,7 @@ public class LecturerServiceImpl implements LecturerService {
     }
 
     @Override
+    @Transactional
     public LecturerResponse create(LecturerRequest request) {
         Lecturer lecturer = LecturerAutoMapper.MAPPER.mapToLecturer(request);
         long maxValue;
@@ -91,6 +99,11 @@ public class LecturerServiceImpl implements LecturerService {
         lecturer.setLecturerCode(lecturerCode);
         lecturer.setFaculty(faculty);
         Lecturer savedLecture = lecturerRepository.save(lecturer);
+
+        Account account = new Account();
+        account.linkToLecturer(savedLecture);
+        account.setPassword(passwordEncoder.encode(Constant.DEFAULT_PWD));
+        accountRepository.save(account);
 
         LecturerResponse response = LecturerAutoMapper.MAPPER.mapToLecturerResponse(savedLecture);
         response.setFacultyId(faculty.getId());

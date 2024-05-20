@@ -120,7 +120,7 @@ public class EnrollServiceImpl implements EnrollService {
             try{
                 Enroll enroll  = new Enroll(student, unit, null);
                 Enroll saved = enrollRepository.save(enroll);
-//                kafkaTemplate.send("notificationTopic",
+//                kafkaTemplate.send(Constant.NOTIFICATION_TOPIC,
 //                        new RegisterSuccessEvent(student.getEmail(), saved.getUnit().getSubject().getSubjectName(), unit.getTuitionPerCredit() * unit.getSubject().getCredit()));
                 return true;
             }catch (OptimisticLockingFailureException ex){
