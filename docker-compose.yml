@@ -1,10 +1,13 @@
 version: '3'
 services:
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.0.1
     container_name: zookeeper
     ports:
       - "2181:2181"
+    networks:
+      - spring
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -14,6 +17,8 @@ services:
       container_name: broker
       ports:
         - "9092:9092"
+      networks:
+        - spring
       depends_on:
         - zookeeper
       environment:
@@ -24,3 +29,132 @@ services:
         KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
         KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
         KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+
+  discovery-server:
+      image: thanhsanggl06/discovery-server:latest
+      container_name: discovery-server
+      pull_policy: always
+      ports:
+        - "8761:8761"
+      networks:
+        - spring
+      environment:
+        - SPRING_PROFILES_ACTIVE=docker
+
+  api-gateway:
+      image: thanhsanggl06/api-gateway:latest
+      container_name: api-gateway
+      pull_policy: always
+      ports:
+        - "8080:8080"
+      networks:
+        - spring
+      environment:
+        - SPRING_PROFILES_ACTIVE=docker
+        - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY= TRACE
+      depends_on:
+        - discovery-server
+
+  major-service:
+      container_name: major-service
+      image: thanhsanggl06/major-service:latest
+      pull_policy: always
+      ports:
+        - "8081:8081"
+      networks:
+        - spring
+      environment:
+        - SPRING_PROFILES_ACTIVE=docker
+      depends_on:
+        - discovery-server
+        - api-gateway
+
+  identity-service:
+    container_name: identity-service
+    image: thanhsanggl06/identity-service:latest
+    pull_policy: always
+    ports:
+      - "8086:8086"
+    networks:
+      - spring
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - discovery-server
+      - api-gateway
+
+  lecturer-service:
+    container_name: lecturer-service
+    image: thanhsanggl06/lecturer-service:latest
+    pull_policy: always
+    ports:
+      - "8082:8082"
+    networks:
+      - spring
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - discovery-server
+      - api-gateway
+
+  student-service:
+    container_name: student-service
+    image: thanhsanggl06/student-service:latest
+    pull_policy: always
+    ports:
+      - "8083:8083"
+    networks:
+      - spring
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - discovery-server
+      - api-gateway
+
+  notification-service:
+    container_name: notification-service
+    image: thanhsanggl06/notification-service2:latest
+    pull_policy: always
+    ports:
+      - "8087:8087"
+    networks:
+      - spring
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - broker
+
+  course-service:
+    container_name: course-service
+    image: thanhsanggl06/course-service:latest
+    pull_policy: always
+    ports:
+      - "8084:8084"
+    networks:
+      - spring
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - discovery-server
+      - api-gateway
+
+
+  registerunit-service:
+    container_name: registerunit-service
+    image: thanhsanggl06/registerunit-service:latest
+    pull_policy: always
+    ports:
+      - "8085:8085"
+    networks:
+      - spring
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - discovery-server
+      - api-gateway
+      - broker
+
+networks:
+  spring:
+    driver: bridge

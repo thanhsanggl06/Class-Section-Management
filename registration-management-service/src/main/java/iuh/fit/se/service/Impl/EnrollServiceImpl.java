@@ -5,22 +5,23 @@ import iuh.fit.se.dto.EnrollRequest;
 import iuh.fit.se.entity.Enroll;
 import iuh.fit.se.entity.Student;
 import iuh.fit.se.entity.Unit;
-import iuh.fit.se.event.RegisterSuccessEvent;
 import iuh.fit.se.exception.ResourceNotFoundException;
 import iuh.fit.se.repository.EnrollRepository;
 import iuh.fit.se.repository.UnitRepository;
 import iuh.fit.se.service.EnrollService;
 import lombok.AllArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 @Service
@@ -29,7 +30,8 @@ public class EnrollServiceImpl implements EnrollService {
     private final EnrollRepository enrollRepository;
     private final UnitRepository unitRepository;
     private final WebClient.Builder webClientBuilder;
-    private final KafkaTemplate<String, RegisterSuccessEvent> kafkaTemplate;
+    private final KafkaTemplate<String, Map<String, Object>> kafkaTemplate;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
 
     public Student getStudent(String studentCode){
@@ -40,16 +42,15 @@ public class EnrollServiceImpl implements EnrollService {
                 .bodyToMono(Student.class).block();
     }
 
-    public Mono<Student> fallbackForGetStudent(String studentCode, WebClientResponseException e) {
-        return Mono.empty();
-    }
 
     @Override
-    public Boolean register(EnrollRequest enrollRequest) {
+    @Transactional
+    public Object register(EnrollRequest enrollRequest) {
         Student student = getStudent(enrollRequest.getStudentCode());
 
         if(student == null){
-            throw new ResourceNotFoundException("STUDENT",  "CODE", enrollRequest.getStudentCode());
+            return "student not found";
+//            throw new ResourceNotFoundException("STUDENT",  "CODE", enrollRequest.getStudentCode());
         }
 
         Unit unit = unitRepository.findById(enrollRequest.getUnitId()).orElseThrow(() -> new ResourceNotFoundException("UNIT",  "ID",enrollRequest.getUnitId()));
@@ -60,16 +61,19 @@ public class EnrollServiceImpl implements EnrollService {
 //                .bodyToMono(Unit.class).block();
 
         if(unit == null){
-            throw new ResourceNotFoundException("UNIT",  "ID", enrollRequest.getUnitId());
+            return "unit class not found";
+//            throw new ResourceNotFoundException("UNIT",  "ID", enrollRequest.getUnitId());
         }
 
         if(unit.getStartDate().isBefore(LocalDate.now())){
-            throw new IllegalStateException("Class registration is closed");
+            return "Class registration is closed";
+//            throw new IllegalStateException("Class registration is closed");
         }
 
         int countEnrollments = enrollRepository.countEnrollmentsByUnit(unit);
         if(countEnrollments >= unit.getNumberOfStudent()){
-            throw new IllegalStateException("The class has been fully paid");
+            return "The class has been fully paid";
+//            throw new IllegalStateException("The class has been fully paid");
         }
 
         //Check theory schedule
@@ -113,21 +117,26 @@ public class EnrollServiceImpl implements EnrollService {
 
 
         if(!Stream.concat(checkPracticeSchedule.stream(), checkSchedule.stream()).toList().isEmpty()){
-            throw new IllegalStateException("class time overlaps");
+            return "class time overlaps";
+//            throw new IllegalStateException("class time overlaps");
         }
 
         if(unit.getSubject().getPrerequisite().isEmpty()){
             try{
                 Enroll enroll  = new Enroll(student, unit, null);
                 Enroll saved = enrollRepository.save(enroll);
-//                kafkaTemplate.send(Constant.NOTIFICATION_TOPIC,
-//                        new RegisterSuccessEvent(student.getEmail(), saved.getUnit().getSubject().getSubjectName(), unit.getTuitionPerCredit() * unit.getSubject().getCredit()));
+                Map<String, Object> data = new HashMap<>();
+                data.put("email", student.getEmail());
+                data.put("subjectName", saved.getUnit().getSubject().getSubjectName());
+                data.put("tuition", unit.getTuitionPerCredit() * unit.getSubject().getCredit());
+                kafkaTemplate.send(Constant.NOTIFICATION_TOPIC, data);
                 return true;
             }catch (OptimisticLockingFailureException ex){
                 return false;
             }
         }else{
-            throw new IllegalStateException("The subject has prerequisite subjects");
+            return "The subject has prerequisite subjects";
+//            throw new IllegalStateException("The subject has prerequisite subjects");
         }
     }
 }

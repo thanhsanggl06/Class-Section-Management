@@ -9,4 +9,5 @@ import org.mapstruct.factory.Mappers;
 public interface FacultyAutoMapper {
     FacultyAutoMapper MAPPER = Mappers.getMapper(FacultyAutoMapper.class);
     Faculty mapToFaculty (FacultyRequest facultyRequest);
+
 }
